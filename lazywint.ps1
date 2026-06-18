@@ -21,7 +21,7 @@ $script:FallbackTools = @"
         {
           "name": "massgrave",
           "description": "Microsoft Activation Scripts",
-          "run_command": "irm https://massgrave.dev/get | iex",
+          "run_command": "irm https://get.activated.win | iex",
           "github_url": "https://github.com/massgravel/Microsoft-Activation-Scripts"
         },
         {
@@ -195,36 +195,16 @@ function Load-ToolCatalog {
     Write-Host "Checking tool list..." -ForegroundColor DarkGray
 
     $remoteLastModified = Get-RemoteLastModified
-    $cachedLastModified = Get-CachedLastModified
-    $shouldFetch = $true
 
-    if ((Test-Path $script:CacheToolsPath) -and $remoteLastModified -and $cachedLastModified) {
-        $shouldFetch = $remoteLastModified -gt $cachedLastModified
+    try {
+        $freshToolsUrl = $script:ToolsUrl + "?t=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+        $json = (Invoke-WebRequest -Uri $freshToolsUrl -UseBasicParsing -TimeoutSec 15).Content
+        $catalog = ConvertFrom-ToolsJson $json
+        Save-ToolsCache -Json $json -LastModified $remoteLastModified
+        return $catalog
     }
-    elseif ((Test-Path $script:CacheToolsPath) -and -not $remoteLastModified) {
-        $shouldFetch = $false
-    }
-
-    if ($shouldFetch) {
-        try {
-            $json = (Invoke-WebRequest -Uri $script:ToolsUrl -UseBasicParsing -TimeoutSec 15).Content
-            $catalog = ConvertFrom-ToolsJson $json
-            Save-ToolsCache -Json $json -LastModified $remoteLastModified
-            return $catalog
-        }
-        catch {
-            Write-Notice "Could not fetch tools.json. Using cached or built-in tools." "Yellow"
-        }
-    }
-
-    if (Test-Path $script:CacheToolsPath) {
-        try {
-            $json = Get-Content -Path $script:CacheToolsPath -Raw
-            return ConvertFrom-ToolsJson $json
-        }
-        catch {
-            Write-Notice "Cached tools.json could not be read. Using built-in tools." "Yellow"
-        }
+    catch {
+        Write-Notice "Could not fetch GitHub tools.json. Using built-in fallback tools." "Yellow"
     }
 
     return ConvertFrom-ToolsJson $script:FallbackTools
