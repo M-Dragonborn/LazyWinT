@@ -1,0 +1,21 @@
+{
+  "categories": [
+    {
+      "name": "Windows Setup",
+      "tools": [
+        {
+          "name": "massgrave",
+          "description": "Microsoft Activation Scripts",
+          "run_command": "irm https://massgrave.dev/get | iex",
+          "github_url": "https://github.com/massgravel/Microsoft-Activation-Scripts"
+        },
+        {
+          "name": "Win11Debloat",
+          "description": "Windows 11 debloating script",
+          "run_command": "& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/Raphire/Win11Debloat/master/Get.ps1')))",
+          "github_url": "https://github.com/Raphire/Win11Debloat"
+        }
+      ]
+    }
+  ]
+}
