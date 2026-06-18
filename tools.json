@@ -6,7 +6,7 @@
         {
           "name": "massgrave",
           "description": "Microsoft Activation Scripts",
-          "run_command": "irm https://massgrave.dev/get | iex",
+          "run_command": "irm https://get.activated.win | iex",
           "github_url": "https://github.com/massgravel/Microsoft-Activation-Scripts"
         },
         {
