@@ -1,10 +1,13 @@
 $ErrorActionPreference = "Stop"
 
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+}
+catch {
+}
+
 $script:RepoRawBase = "https://raw.githubusercontent.com/M-Dragonborn/LazyWinT/main"
 $script:ToolsUrl = "$script:RepoRawBase/tools.json"
-$script:CacheDir = Join-Path $env:LOCALAPPDATA "LazyWinT"
-$script:CacheToolsPath = Join-Path $script:CacheDir "tools.json"
-$script:CacheMetaPath = Join-Path $script:CacheDir "tools.meta"
 $script:WorkDir = Join-Path ([System.IO.Path]::GetTempPath()) ("LazyWinT-" + [guid]::NewGuid().ToString("N"))
 $script:RunHistory = @()
 $script:RunState = @{}
@@ -12,30 +15,7 @@ $script:CurrentProcess = $null
 $script:CurrentToolName = $null
 $script:ExitRequested = $false
 $script:ToolCatalogSource = "Not loaded"
-
-$script:FallbackTools = @"
-{
-  "categories": [
-    {
-      "name": "Windows Setup",
-      "tools": [
-        {
-          "name": "massgrave",
-          "description": "Microsoft Activation Scripts",
-          "run_command": "irm https://get.activated.win | iex",
-          "github_url": "https://github.com/massgravel/Microsoft-Activation-Scripts"
-        },
-        {
-          "name": "Win11Debloat",
-          "description": "Windows 11 debloating script",
-          "run_command": "& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/Raphire/Win11Debloat/master/Get.ps1')))",
-          "github_url": "https://github.com/Raphire/Win11Debloat"
-        }
-      ]
-    }
-  ]
-}
-"@
+$script:ToolCatalogDetail = ""
 
 function Write-Title {
     Clear-Host
@@ -43,6 +23,9 @@ function Write-Title {
     Write-Host "LazyWinT" -ForegroundColor Cyan
     Write-Host "Windows terminal tool launcher" -ForegroundColor DarkGray
     Write-Host "Tools: $script:ToolCatalogSource" -ForegroundColor DarkGray
+    if (-not [string]::IsNullOrWhiteSpace($script:ToolCatalogDetail)) {
+        Write-Host $script:ToolCatalogDetail -ForegroundColor DarkGray
+    }
     Write-Host ""
 }
 
@@ -159,60 +142,30 @@ function Get-RemoteLastModified {
     return $null
 }
 
-function Get-CachedLastModified {
-    if (-not (Test-Path $script:CacheMetaPath)) {
-        return $null
-    }
-
-    try {
-        $value = Get-Content -Path $script:CacheMetaPath -Raw
-        if ([string]::IsNullOrWhiteSpace($value)) {
-            return $null
-        }
-        return [datetime]::Parse($value).ToUniversalTime()
-    }
-    catch {
-        return $null
-    }
-}
-
-function Save-ToolsCache {
-    param(
-        [string]$Json,
-        [AllowNull()]$LastModified
-    )
-
-    if (-not (Test-Path $script:CacheDir)) {
-        New-Item -ItemType Directory -Path $script:CacheDir | Out-Null
-    }
-
-    Set-Content -Path $script:CacheToolsPath -Value $Json -Encoding UTF8
-    if ($null -ne $LastModified) {
-        Set-Content -Path $script:CacheMetaPath -Value $LastModified.ToString("o") -Encoding ASCII
-    }
-}
-
 function Load-ToolCatalog {
     Write-Title
     Write-Host "Checking tool list..." -ForegroundColor DarkGray
 
-    $remoteLastModified = Get-RemoteLastModified
-
     try {
-        $freshToolsUrl = $script:ToolsUrl + "?t=" + [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
-        $json = (Invoke-WebRequest -Uri $freshToolsUrl -UseBasicParsing -TimeoutSec 15).Content
+        $freshToolsUrl = $script:ToolsUrl + "?cacheBust=" + [guid]::NewGuid().ToString("N")
+        $headers = @{
+            "Cache-Control" = "no-cache"
+            "Pragma" = "no-cache"
+            "User-Agent" = "LazyWinT"
+        }
+        $json = (Invoke-WebRequest -Uri $freshToolsUrl -UseBasicParsing -TimeoutSec 15 -Headers $headers).Content
         $catalog = ConvertFrom-ToolsJson $json
-        Save-ToolsCache -Json $json -LastModified $remoteLastModified
         $script:ToolCatalogSource = "GitHub tools.json"
+        $script:ToolCatalogDetail = $script:ToolsUrl
         return $catalog
     }
     catch {
-        $script:ToolCatalogSource = "Built-in fallback"
-        Write-Notice "Could not fetch GitHub tools.json. Using built-in fallback tools." "Yellow"
+        $script:ToolCatalogSource = "GitHub fetch failed"
+        $script:ToolCatalogDetail = $script:ToolsUrl
+        Write-Notice "Could not fetch GitHub tools.json. LazyWinT cannot continue." "Red"
         Write-Notice $_.Exception.Message "DarkGray"
+        throw
     }
-
-    return ConvertFrom-ToolsJson $script:FallbackTools
 }
 
 function Show-RunSummary {
