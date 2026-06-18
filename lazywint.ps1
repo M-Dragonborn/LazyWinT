@@ -11,6 +11,7 @@ $script:RunState = @{}
 $script:CurrentProcess = $null
 $script:CurrentToolName = $null
 $script:ExitRequested = $false
+$script:ToolCatalogSource = "Not loaded"
 
 $script:FallbackTools = @"
 {
@@ -41,6 +42,7 @@ function Write-Title {
     Write-Host ""
     Write-Host "LazyWinT" -ForegroundColor Cyan
     Write-Host "Windows terminal tool launcher" -ForegroundColor DarkGray
+    Write-Host "Tools: $script:ToolCatalogSource" -ForegroundColor DarkGray
     Write-Host ""
 }
 
@@ -201,10 +203,13 @@ function Load-ToolCatalog {
         $json = (Invoke-WebRequest -Uri $freshToolsUrl -UseBasicParsing -TimeoutSec 15).Content
         $catalog = ConvertFrom-ToolsJson $json
         Save-ToolsCache -Json $json -LastModified $remoteLastModified
+        $script:ToolCatalogSource = "GitHub tools.json"
         return $catalog
     }
     catch {
+        $script:ToolCatalogSource = "Built-in fallback"
         Write-Notice "Could not fetch GitHub tools.json. Using built-in fallback tools." "Yellow"
+        Write-Notice $_.Exception.Message "DarkGray"
     }
 
     return ConvertFrom-ToolsJson $script:FallbackTools
