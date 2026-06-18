@@ -20,6 +20,12 @@
           "description": "ha ha your stupid",
           "run_command": "no im not you are",
           "github_url": "your both stupid"
+        },
+        {
+          "name": "this is for testing 2",
+          "description": "ha ha your stupid",
+          "run_command": "no im not you are",
+          "github_url": "your both stupid"
         }
       ]
     }
