@@ -14,36 +14,6 @@
           "description": "Windows 11 debloating script",
           "run_command": "& ([scriptblock]::Create((irm 'https://raw.githubusercontent.com/Raphire/Win11Debloat/master/Get.ps1')))",
           "github_url": "https://github.com/Raphire/Win11Debloat"
-        },
-        {
-          "name": "this is for testing",
-          "description": "ha ha your stupid",
-          "run_command": "no im not you are",
-          "github_url": "your both stupid"
-        },
-        {
-          "name": "this is for testing 2",
-          "description": "ha ha your stupid",
-          "run_command": "no im not you are",
-          "github_url": "your both stupid"
-        },
-        {
-          "name": "this is for testing 3",
-          "description": "ha ha your stupid",
-          "run_command": "no im not you are",
-          "github_url": "your both stupid"
-        },
-        {
-          "name": "this is for testing 4",
-          "description": "ha ha your stupid",
-          "run_command": "no im not you are",
-          "github_url": "your both stupid"
-        },
-        {
-          "name": "this is for testing 5",
-          "description": "ha ha your stupid",
-          "run_command": "no im not you are",
-          "github_url": "your both stupid"
         }
       ]
     }
