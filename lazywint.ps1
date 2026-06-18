@@ -105,18 +105,19 @@ function ConvertFrom-ToolsJson {
     param([string]$Json)
 
     $catalog = $Json | ConvertFrom-Json
-    if ($null -eq $catalog.categories -or $catalog.categories.Count -eq 0) {
+    $categories = @($catalog.categories)
+    if ($null -eq $catalog.categories -or $categories.Count -eq 0) {
         throw "tools.json does not contain any categories."
     }
 
-    foreach ($category in $catalog.categories) {
+    foreach ($category in $categories) {
         if ([string]::IsNullOrWhiteSpace($category.name)) {
             throw "A category is missing a name."
         }
         if ($null -eq $category.tools) {
             throw "Category '$($category.name)' has no tools list."
         }
-        foreach ($tool in $category.tools) {
+        foreach ($tool in @($category.tools)) {
             foreach ($field in @("name", "description", "run_command", "github_url")) {
                 $property = $tool.PSObject.Properties[$field]
                 if ($null -eq $property -or [string]::IsNullOrWhiteSpace([string]$property.Value)) {
@@ -155,8 +156,13 @@ function Load-ToolCatalog {
         }
         $json = (Invoke-WebRequest -Uri $freshToolsUrl -UseBasicParsing -TimeoutSec 15 -Headers $headers).Content
         $catalog = ConvertFrom-ToolsJson $json
+        $categoryCount = @($catalog.categories).Count
+        $toolCount = 0
+        foreach ($category in @($catalog.categories)) {
+            $toolCount += @($category.tools).Count
+        }
         $script:ToolCatalogSource = "GitHub tools.json"
-        $script:ToolCatalogDetail = $script:ToolsUrl
+        $script:ToolCatalogDetail = "$script:ToolsUrl ($categoryCount categories, $toolCount tools)"
         return $catalog
     }
     catch {
@@ -392,15 +398,16 @@ function Show-CategoryMenu {
         Write-Host $Category.name -ForegroundColor Cyan
         Write-Host ""
 
-        for ($i = 0; $i -lt $Category.tools.Count; $i++) {
-            $tool = $Category.tools[$i]
+        $tools = @($Category.tools)
+        for ($i = 0; $i -lt $tools.Count; $i++) {
+            $tool = $tools[$i]
             $number = $i + 1
             $prefix = Get-ToolPrefix $tool
             $color = Get-ToolColor $tool
             Write-Host ("[$number] $prefix$($tool.name) - $($tool.description)") -ForegroundColor $color
         }
 
-        $backNumber = $Category.tools.Count + 1
+        $backNumber = $tools.Count + 1
         Write-Host "[$backNumber] Back"
         Write-Host ""
 
@@ -409,7 +416,7 @@ function Show-CategoryMenu {
             return
         }
 
-        Show-ToolMenu $Category.tools[$choice - 1]
+        Show-ToolMenu $tools[$choice - 1]
     }
 }
 
@@ -421,13 +428,14 @@ function Show-MainMenu {
         Write-Host "Categories" -ForegroundColor Cyan
         Write-Host ""
 
-        for ($i = 0; $i -lt $Catalog.categories.Count; $i++) {
-            $category = $Catalog.categories[$i]
+        $categories = @($Catalog.categories)
+        for ($i = 0; $i -lt $categories.Count; $i++) {
+            $category = $categories[$i]
             $number = $i + 1
             Write-Host "[$number] $($category.name)" -ForegroundColor Green
         }
 
-        $exitNumber = $Catalog.categories.Count + 1
+        $exitNumber = $categories.Count + 1
         Write-Host "[$exitNumber] Exit"
         Write-Host ""
 
@@ -437,7 +445,7 @@ function Show-MainMenu {
             return
         }
 
-        Show-CategoryMenu $Catalog.categories[$choice - 1]
+        Show-CategoryMenu $categories[$choice - 1]
     }
 }
 
